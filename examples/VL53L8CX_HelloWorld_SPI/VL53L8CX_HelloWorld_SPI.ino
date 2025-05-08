@@ -135,77 +135,128 @@ void print_result(VL53L8CX_ResultsData *Result)
 
   display_commands_banner();
 
-  SerialPort.print("Cell Format :\n\n");
+  // Print header for the data
+  SerialPort.println("VL53L8CX Measurement Results:");
+  SerialPort.println("----------------------------");
+  
+  // Show current configuration
+  SerialPort.print("Resolution: ");
+  SerialPort.print((res == VL53L8CX_RESOLUTION_4X4) ? "4x4" : "8x8");
+  SerialPort.print(" | Signal: ");
+  SerialPort.print(EnableSignal ? "ON" : "OFF");
+  SerialPort.print(" | Ambient: ");
+  SerialPort.println(EnableAmbient ? "ON" : "OFF");
+  SerialPort.println();
 
-  for (l = 0; l < VL53L8CX_NB_TARGET_PER_ZONE; l++) {
-    snprintf(report, sizeof(report), " \033[38;5;10m%20s\033[0m : %20s\n", "Distance [mm]", "Status");
-    SerialPort.print(report);
-
-    if (EnableAmbient || EnableSignal) {
-      snprintf(report, sizeof(report), " %20s : %20s\n", "Signal [kcps/spad]", "Ambient [kcps/spad]");
-      SerialPort.print(report);
-    }
-  }
-
-  SerialPort.print("\n\n");
-
+  // Process each row of zones
   for (j = 0; j < number_of_zones; j += zones_per_line) {
+    // Print row header
+    SerialPort.print("Row ");
+    SerialPort.print(j / zones_per_line);
+    SerialPort.println(":");
+    
+    // Print column headers
+    SerialPort.print("Zone | ");
     for (i = 0; i < zones_per_line; i++) {
-      SerialPort.print(" -----------------");
+      SerialPort.print(String(j + i) + "\t| ");
     }
-    SerialPort.print("\n");
-
-    for (i = 0; i < zones_per_line; i++) {
-      SerialPort.print("|                 ");
+    SerialPort.println();
+    
+    // Print separator line
+    for (i = 0; i <= zones_per_line; i++) {
+      SerialPort.print("--------");
     }
-    SerialPort.print("|\n");
+    SerialPort.println();
 
+    // Print distance values for each target
     for (l = 0; l < VL53L8CX_NB_TARGET_PER_ZONE; l++) {
-      // Print distance and status
-      for (k = (zones_per_line - 1); k >= 0; k--) {
-        if (Result->nb_target_detected[j + k] > 0) {
-          snprintf(report, sizeof(report), "| \033[38;5;10m%5ld\033[0m  :  %5ld ",
-                   (long)Result->distance_mm[(VL53L8CX_NB_TARGET_PER_ZONE * (j + k)) + l],
-                   (long)Result->target_status[(VL53L8CX_NB_TARGET_PER_ZONE * (j + k)) + l]);
-          SerialPort.print(report);
-        } else {
-          snprintf(report, sizeof(report), "| %5s  :  %5s ", "X", "X");
-          SerialPort.print(report);
-        }
+      if (l == 0) {
+        SerialPort.print("Dist  | ");
+      } else {
+        SerialPort.print("Dist" + String(l) + " | ");
       }
-      SerialPort.print("|\n");
-
-      if (EnableAmbient || EnableSignal) {
-        // Print Signal and Ambient
-        for (k = (zones_per_line - 1); k >= 0; k--) {
-          if (Result->nb_target_detected[j + k] > 0) {
-            if (EnableSignal) {
-              snprintf(report, sizeof(report), "| %5ld  :  ", (long)Result->signal_per_spad[(VL53L8CX_NB_TARGET_PER_ZONE * (j + k)) + l]);
-              SerialPort.print(report);
-            } else {
-              snprintf(report, sizeof(report), "| %5s  :  ", "X");
-              SerialPort.print(report);
-            }
-            if (EnableAmbient) {
-              snprintf(report, sizeof(report), "%5ld ", (long)Result->ambient_per_spad[j + k]);
-              SerialPort.print(report);
-            } else {
-              snprintf(report, sizeof(report), "%5s ", "X");
-              SerialPort.print(report);
-            }
+      
+      // Print distance for each zone in this row
+      for (k = 0; k < zones_per_line; k++) {
+        if (j + k < number_of_zones) { // Make sure we don't go out of bounds
+          if (Result->nb_target_detected[j + k] > l) {
+            SerialPort.print(Result->distance_mm[(VL53L8CX_NB_TARGET_PER_ZONE * (j + k)) + l]);
+            SerialPort.print("\t| ");
           } else {
-            snprintf(report, sizeof(report), "| %5s  :  %5s ", "X", "X");
-            SerialPort.print(report);
+            SerialPort.print("-\t| ");
           }
         }
-        SerialPort.print("|\n");
+      }
+      SerialPort.println();
+      
+      // Print status values
+      if (l == 0) {
+        SerialPort.print("State | ");
+      } else {
+        SerialPort.print("State" + String(l) + "| ");
+      }
+      
+      for (k = 0; k < zones_per_line; k++) {
+        if (j + k < number_of_zones) {
+          if (Result->nb_target_detected[j + k] > l) {
+            SerialPort.print(Result->target_status[(VL53L8CX_NB_TARGET_PER_ZONE * (j + k)) + l]);
+            SerialPort.print("\t| ");
+          } else {
+            SerialPort.print("-\t| ");
+          }
+        }
+      }
+      SerialPort.println();
+
+      // Print signal and ambient if enabled
+      if (EnableSignal) {
+        if (l == 0) {
+          SerialPort.print("Signal| ");
+        } else {
+          SerialPort.print("Sig" + String(l) + "  | ");
+        }
+        
+        for (k = 0; k < zones_per_line; k++) {
+          if (j + k < number_of_zones) {
+            if (Result->nb_target_detected[j + k] > l) {
+              SerialPort.print(Result->signal_per_spad[(VL53L8CX_NB_TARGET_PER_ZONE * (j + k)) + l]);
+              SerialPort.print("\t| ");
+            } else {
+              SerialPort.print("-\t| ");
+            }
+          }
+        }
+        SerialPort.println();
+      }
+      
+      if (EnableAmbient) {
+        if (l == 0) {
+          SerialPort.print("Ambnt | ");
+        } else {
+          SerialPort.print("Amb" + String(l) + "  | ");
+        }
+        
+        for (k = 0; k < zones_per_line; k++) {
+          if (j + k < number_of_zones) {
+            if (Result->nb_target_detected[j + k] > 0) { // Ambient is per zone, not per target
+              SerialPort.print(Result->ambient_per_spad[j + k]);
+              SerialPort.print("\t| ");
+            } else {
+              SerialPort.print("-\t| ");
+            }
+          }
+        }
+        SerialPort.println();
+      }
+      
+      // Add a separator line between targets
+      if (l < VL53L8CX_NB_TARGET_PER_ZONE - 1 && 
+          (EnableSignal || EnableAmbient || Result->nb_target_detected[j] > l + 1)) {
+        SerialPort.println("--------+--------+--------+--------+--------+--------+--------+--------+");
       }
     }
+    SerialPort.println();
   }
-  for (i = 0; i < zones_per_line; i++) {
-    SerialPort.print(" -----------------");
-  }
-  SerialPort.print("\n");
 }
 
 void toggle_resolution(void)
