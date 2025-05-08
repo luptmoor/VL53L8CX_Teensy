@@ -66,8 +66,8 @@
 #endif
 #define SerialPort Serial
 
-#define LPN_PIN A3
-#define PWREN_PIN 11
+#define LPN_PIN -1
+#define PWREN_PIN -1
 
 void print_result(VL53L8CX_ResultsData *Result);
 void clear_screen(void);
@@ -79,9 +79,36 @@ VL53L8CX sensor_vl53l8cx_top(&DEV_I2C, LPN_PIN);
 
 bool EnableAmbient = false;
 bool EnableSignal = false;
-uint8_t res = VL53L8CX_RESOLUTION_4X4;
+uint8_t res = VL53L8CX_RESOLUTION_8X8;
 char report[256];
 uint8_t status;
+
+void scan_i2c() {
+  Serial.println("Scanning I2C bus...");
+  byte error, address;
+  int deviceCount = 0;
+  
+  for(address = 1; address < 127; address++) {
+    Wire.beginTransmission(address);
+    error = Wire.endTransmission();
+    
+    if (error == 0) {
+      Serial.print("I2C device found at address 0x");
+      if (address < 16) Serial.print("0");
+      Serial.print(address, HEX);
+      Serial.println();
+      deviceCount++;
+      
+      if (address == 0x52) {
+        Serial.println(" - VL53L8CX found!");
+      }
+    }
+  }
+  
+  if (deviceCount == 0) {
+    Serial.println("No I2C devices found");
+  }
+}
 
 /* Setup ---------------------------------------------------------------------*/
 void setup()
@@ -95,17 +122,69 @@ void setup()
   }
 
   // Initialize serial for output.
-  SerialPort.begin(460800);
+  SerialPort.begin(9600);
+  while (!SerialPort) {
+    ; // wait for serial port to connect. Needed for native USB port only
+  }
 
+  Serial.println("Initializing I2C bus");
   // Initialize I2C bus.
   DEV_I2C.begin();
+  DEV_I2C.setClock(400000); // Set I2C clock speed to 400kHz
 
+  Serial.println("Configuring component");
   // Configure VL53L8CX component.
   sensor_vl53l8cx_top.begin();
-  status = sensor_vl53l8cx_top.init();
+  // sensor_vl53l8cx_top.set_i2c_address(0x29 << 1);
 
+  // // Before initialization
+  // sensor_vl53l8cx_top.off();
+  // delay(100);
+  // sensor_vl53l8cx_top.on();
+  // delay(100);
+
+  scan_i2c();
+
+  uint8_t p_alive = 0;
+  status = sensor_vl53l8cx_top.is_alive(&p_alive);
+  Serial.print("Sensor alive: ");
+  Serial.print(p_alive);
+  Serial.print(" with status: ");
+  Serial.println(status);
+
+  Wire.beginTransmission(0x29);
+  uint8_t err = Wire.endTransmission();
+  Serial.printf("error = %u (should be 0)\n", err);
+  
+  if (status) {
+    Serial.print("Error checking sensor alive with status: ");
+    Serial.println(status);
+  }
+
+  Serial.println("Calling init");
+  status = sensor_vl53l8cx_top.init();
+  if (status) {
+    Serial.print("Error initializing sensor with status: ");
+    Serial.println(status);
+  }
+  status = sensor_vl53l8cx_top.set_resolution(res);
+  if (status) {
+    Serial.print("Error setting resolution with status: ");
+    Serial.println(status);
+  }
+  status = sensor_vl53l8cx_top.set_ranging_frequency_hz(15);
+  if (status) {
+    Serial.print("Error setting frequency with status: ");
+    Serial.println(status);
+  }
+
+  Serial.println("Start measurements");
   // Start Measurements
   status = sensor_vl53l8cx_top.start_ranging();
+  if (status) {
+    Serial.print("Error starting measurements with status: ");
+    Serial.println(status);
+  }
 }
 
 void loop()

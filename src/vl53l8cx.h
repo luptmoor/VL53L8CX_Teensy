@@ -193,33 +193,35 @@ class VL53L8CX {
      * @param  size: number of bytes to be written.
      * @retval 0 if ok, an error code otherwise.
      */
-    uint8_t IO_Write(uint16_t RegisterAddress, uint8_t *p_values, uint32_t size)
-    {
-      if (dev_i2c) {
-        uint32_t i = 0;
-        uint8_t buffer[2];
-        while (i < size) {
-          // If still more than DEFAULT_I2C_BUFFER_LEN bytes to go, DEFAULT_I2C_BUFFER_LEN,
-          // else the remaining number of bytes
-          size_t current_write_size = (size - i > DEFAULT_I2C_BUFFER_LEN ? DEFAULT_I2C_BUFFER_LEN : size - i);
-          dev_i2c->beginTransmission((uint8_t)((_dev.platform.address >> 1) & 0x7F));
-          // Target register address for transfer
-          buffer[0] = (uint8_t)((RegisterAddress + i) >> 8);
-          buffer[1] = (uint8_t)((RegisterAddress + i) & 0xFF);
-          dev_i2c->write(buffer, 2);
-          if (dev_i2c->write(p_values + i, current_write_size) == 0) {
-            return 1;
-          } else {
-            i += current_write_size;
-            if (size - i) {
-              // Flush buffer and send stop bit so we have compatibility also with ESP32 platforms
-              dev_i2c->endTransmission(true);
-            }
-          }
-        }
-        return dev_i2c->endTransmission(true);
-      }
+	uint8_t IO_Write(uint16_t reg, uint8_t *p_values, uint32_t size)
+	{
+	    if (dev_i2c) {
+		uint32_t i = 0;
+		uint8_t addr[2];
 
+		while (i < size) {
+		    /* leave room for the 2‑byte register header */
+		    size_t chunk = min(DEFAULT_I2C_BUFFER_LEN - 2, size - i);
+
+		    dev_i2c->beginTransmission((uint8_t)((_dev.platform.address >> 1) & 0x7F));
+
+		    addr[0] = (uint8_t)((reg + i) >> 8);
+		    addr[1] = (uint8_t)((reg + i) & 0xFF);
+		    dev_i2c->write(addr, 2);
+
+		    if (dev_i2c->write(p_values + i, chunk) != chunk) {
+		        dev_i2c->endTransmission(true);   // release bus
+		        return 1;                         // short write
+		    }
+
+		    i += chunk;
+		    /* send a repeated‑START between chunks, STOP after the last */
+		    bool sendStop = (i >= size);
+		    if (dev_i2c->endTransmission(sendStop) != 0)
+		        return 2;                         // NACK / bus error
+		}
+		return 0;                                 // success
+	    }
       if (dev_spi) {
 
         uint8_t status = 0;
@@ -238,7 +240,7 @@ class VL53L8CX {
           } else {
             data_size = size;
           }
-          temp = RegisterAddress + position;
+          temp = reg + position;
           data_write[0] = SPI_WRITE_MASK(temp) >> 8;
           data_write[1] = SPI_WRITE_MASK(temp) & 0xFF;
           for (i = 0; i < data_size; i++) {
