@@ -123,9 +123,9 @@ void setup()
 
   // Initialize serial for output.
   SerialPort.begin(9600);
-  while (!SerialPort) {
-    ; // wait for serial port to connect. Needed for native USB port only
-  }
+  // while (!SerialPort) {
+  //   ; // wait for serial port to connect. Needed for native USB port only
+  // }
 
   Serial.println("Initializing I2C bus");
   // Initialize I2C bus.
