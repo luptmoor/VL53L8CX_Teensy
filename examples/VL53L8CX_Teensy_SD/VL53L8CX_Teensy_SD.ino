@@ -8,6 +8,7 @@
 #include "i2c_helpers.h"
 #include "display_helpers.h"
 #include "sensor_helpers.h"
+#include "cf_helpers.hpp"
 
 #define DEV_I2C Wire
 #define SerialPort Serial
@@ -73,6 +74,10 @@ void setup()
 
     // Sensor init and status reporting
     sensor_init_and_report();
+
+    COMMUNICATION_SERIAL.begin(COMMUNICATION_SERIAL_BAUD);
+    serialPrintln("Starting Crazyflie communication");
+
 }
 
 void loop()
@@ -99,5 +104,33 @@ void loop()
             handle_cmd(SerialPort.read());
         }
         delay(50);
+    }
+    if (receiving) {
+        receiveCrazyflie();
+    } else if (sending) {
+        // Timer for debugging
+        if (timer_count_main > 1000000) {
+          DEBUG_serial.printf("Received %i packets over last second\n", serial_cf_received_packets);
+          DEBUG_serial.printf("Receiving took %i ms\n", timer_receive_outer / 1000);
+          DEBUG_serial.printf("Sending took %i ms\n", timer_send_outer / 1000);
+          DEBUG_serial.printf("Last control output x:%d, y:%d, z:%d\n", myserial_control_out.torque_x, myserial_control_out.torque_y, myserial_control_out.torque_z);
+          // DEBUG_serial.printf("CPU temp is %f\n", tempmonGetTemp());
+          serial_cf_received_packets = 0;
+          timer_count_main = 0;
+          timer_receive_outer = 0;
+          timer_send_outer = 0;
+        }
+
+        // Set input to network from CF
+        setInputMessage();
+
+        // Send message via UART to CF
+        timer_send = 0;
+        sendCrazyflie();
+        timer_send_outer = timer_send_outer + timer_send;
+        timer_send = 0;
+        
+        // Store output message to be sent back to CF
+        setOutputMessage();
     }
 }
