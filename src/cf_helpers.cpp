@@ -2,7 +2,7 @@
 #include "cf_helpers.hpp"
 
 // -------------------------- COMMUNICATION DEFINED VARIABLES-----------------------------
-const uint8_t START_BYTE_SERIAL_CF = 0x9A;
+byte START_BYTE_SERIAL_CF = 0x9A;
 elapsedMicros last_time_write_to_cf = 0;
 int ack_comm_TX_cf = 0; 
 
@@ -13,7 +13,7 @@ uint32_t serial_cf_missed_packets_in = 0;
 
 volatile float extra_data_out[255]__attribute__((aligned));
 
-bool sending;
+bool sending = false;
 bool receiving = true;
 
 struct serial_control_in myserial_control_in;
@@ -21,11 +21,11 @@ volatile struct serial_control_out myserial_control_out;
 float inputs[9];
 void *controller = NULL;
 
-uint32_t timer_receive = 0;
+elapsedMicros timer_receive = 0;
 uint32_t timer_receive_outer = 0;
-uint32_t timer_send = 0;
+elapsedMicros timer_send = 0;
 uint32_t timer_send_outer = 0;
-uint32_t timer_count_main = 0;
+elapsedMicros timer_count_main = 0;
 
 
 
@@ -61,13 +61,11 @@ void setInputMessage(void)
     inputs[8] = myserial_control_in.yaw * 0.03f;
 }
 
-void setOutputMessage(void)
+void setOutputMessage(const VL53L8CX_ResultsData &Results, uint8_t res)
 {
-    myserial_control_out.torque_x = myserial_control_in.roll;
-    myserial_control_out.torque_y = myserial_control_in.pitch;
-    myserial_control_out.torque_z = myserial_control_in.yaw;
-    myserial_control_out.x_integ = saturateSignedInt16(0);
-    myserial_control_out.y_integ = saturateSignedInt16(0);
+    // first calculate the average distance from the 4x4 grid
+
+
 }
 
 
@@ -105,9 +103,11 @@ void receiveCrazyflie(void)
         timer_receive = 0;
         uint8_t serial_cf_byte_in;
         serial_cf_byte_in = COMMUNICATION_SERIAL.read();
+        // DEBUG_serial.printf("Received byte: %02X\n", serial_cf_byte_in);
         if ((serial_cf_byte_in == START_BYTE_SERIAL_CF) || (serial_cf_buf_in_cnt > 0)) {
-            serial_cf_msg_buf_in[serial_cf_buf_in_cnt] = serial_cf_byte_in;
+        serial_cf_msg_buf_in[serial_cf_buf_in_cnt] = serial_cf_byte_in;
             serial_cf_buf_in_cnt++;
+            // DEBUG_serial.printf("Buffer count: %d\n", serial_cf_buf_in_cnt);
         }
         if (serial_cf_buf_in_cnt > sizeof(struct serial_control_in)  ) {
             serial_cf_buf_in_cnt = 0;

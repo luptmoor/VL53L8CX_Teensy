@@ -125,7 +125,7 @@ void loop()
 
         
         // Store output message to be sent back to CF
-        setOutputMessage(&Results);
+        setOutputMessage(&Results, res);
 
         // Send message via UART to CF
         timer_send = 0;

@@ -24,19 +24,19 @@ extern void *controller;
 extern elapsedMicros last_time_write_to_cf;
 extern bool sending;
 extern bool receiving;
-extern uint32_t timer_count_main;
+extern elapsedMicros timer_count_main;
 extern uint32_t timer_send_outer;
-extern uint32_t timer_send;
-extern uint32_t timer_receive;
+extern elapsedMicros timer_send;
+extern elapsedMicros timer_receive;
 extern uint32_t timer_receive_outer;
 extern uint32_t serial_cf_received_packets;
 extern uint32_t serial_cf_missed_packets_in;
-extern const uint8_t START_BYTE_SERIAL_CF;
+extern byte START_BYTE_SERIAL_CF;
 
 // Function declarations
 void serialParseMessageIn(void);
 void setInputMessage(void);
-void setOutputMessage(void);
+void setOutputMessage(const VL53L8CX_ResultsData &Results, uint8_t res);
 void sendCrazyflie(void);
 void receiveCrazyflie(void);
 
