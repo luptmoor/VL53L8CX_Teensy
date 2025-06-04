@@ -41,7 +41,7 @@ void sensor_init_and_report()
         serialPrint("Error setting resolution with status: ");
         serialPrintln(String(status));
     }
-    status = sensor_vl53l8cx_top.set_ranging_frequency_hz(15);
+    status = sensor_vl53l8cx_top.set_ranging_frequency_hz(60);
     if (status)
     {
         serialPrint("Error setting frequency with status: ");
