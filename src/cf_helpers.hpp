@@ -6,11 +6,14 @@
 #include <string.h>
 #include "cf_msgs.h"
 
+#include <vl53l8cx.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #define COMMUNICATION_SERIAL_BAUD 460800
+// #define COMMUNICATION_SERIAL_BAUD 115200
 #define COMMUNICATION_SERIAL Serial1
 #define DEBUG_serial Serial
 

@@ -9,5 +9,6 @@ extern uint8_t res;
 extern uint8_t status;
 
 void sensor_init_and_report();
+VL53L8CX_ResultsData get_sensor_data();
 
 #endif // SENSOR_HELPERS_H

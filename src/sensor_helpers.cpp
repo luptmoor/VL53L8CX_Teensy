@@ -6,7 +6,8 @@ extern VL53L8CX sensor_vl53l8cx_top;
 extern uint8_t res;
 extern uint8_t status;
 
-void sensor_init_and_report() {
+void sensor_init_and_report()
+{
     serialPrintln("Configuring component");
     sensor_vl53l8cx_top.begin();
 
@@ -53,5 +54,34 @@ void sensor_init_and_report() {
     {
         serialPrint("Error starting measurements with status: ");
         serialPrintln(String(status));
+    }
+}
+
+VL53L8CX_ResultsData get_sensor_data()
+{
+
+    VL53L8CX_ResultsData Results;
+    uint8_t NewDataReady = 0;
+
+    do
+    {
+        status = sensor_vl53l8cx_top.check_data_ready(&NewDataReady);
+        delay(20);
+    } while (!NewDataReady);
+
+    if ((!status) && (NewDataReady != 0))
+    {
+        status = sensor_vl53l8cx_top.get_ranging_data(&Results);
+
+        // Log data to SD card
+        // writeResultsToSD(dataFile, dataFileName, Results, res);
+
+        // serialPrintMeasurementResult(&Results, res, EnableSignal, EnableAmbient);
+
+        // if (SerialPort.available() > 0)
+        // {
+        //     handle_cmd(SerialPort.read());
+        // }
+        return Results;
     }
 }

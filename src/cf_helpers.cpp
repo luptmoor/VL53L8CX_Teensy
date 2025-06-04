@@ -1,5 +1,6 @@
 // #include <Arduino.h>
 #include "cf_helpers.hpp"
+#include "serial_helpers.h"
 
 // -------------------------- COMMUNICATION DEFINED VARIABLES-----------------------------
 byte START_BYTE_SERIAL_CF = 0x9A;
@@ -61,11 +62,34 @@ void setInputMessage(void)
     inputs[8] = myserial_control_in.yaw * 0.03f;
 }
 
+void resetOutputMessage(void)
+{
+    myserial_control_out.dist_ll = 0;
+    myserial_control_out.dist_ml = 0;
+    myserial_control_out.dist_mr = 0;
+    myserial_control_out.dist_rr = 0;
+    myserial_control_out.checksum_out = 0;
+}
+
 void setOutputMessage(const VL53L8CX_ResultsData &Results, uint8_t res)
 {
+    // Reset the output message
+    resetOutputMessage();
+
     // first calculate the average distance from the 4x4 grid
-
-
+    // this is done by summing the distances of the 4 zones and dividing by the number of targets detected
+    // only the zones that have at least one target detected are considered
+    for (uint16_t i = 0; i < 4 ; i++){
+        myserial_control_out.dist_ll += (Results.nb_target_detected[i*4 + 3] > 0) ? Results.distance_mm[i*4 + 3] : 0;
+        myserial_control_out.dist_ml += (Results.nb_target_detected[i*4 + 2] > 0) ? Results.distance_mm[i*4 + 2] : 0;
+        myserial_control_out.dist_mr += (Results.nb_target_detected[i*4 + 1] > 0) ? Results.distance_mm[i*4 + 1] : 0;
+        myserial_control_out.dist_rr += (Results.nb_target_detected[i*4 + 0] > 0) ? Results.distance_mm[i*4 + 0] : 0;
+    }
+    // divide by the number of targets detected in the 4 zones
+    myserial_control_out.dist_ll /= (Results.nb_target_detected[3] + Results.nb_target_detected[7] + Results.nb_target_detected[11] + Results.nb_target_detected[15]);
+    myserial_control_out.dist_ml /= (Results.nb_target_detected[2] + Results.nb_target_detected[6] + Results.nb_target_detected[10] + Results.nb_target_detected[14]);
+    myserial_control_out.dist_mr /= (Results.nb_target_detected[1] + Results.nb_target_detected[5] + Results.nb_target_detected[9] + Results.nb_target_detected[13]);
+    myserial_control_out.dist_rr /= (Results.nb_target_detected[0] + Results.nb_target_detected[4] + Results.nb_target_detected[8] + Results.nb_target_detected[12]);
 }
 
 
@@ -98,16 +122,12 @@ void receiveCrazyflie(void)
   //RECEIVING PACKET
   //Collect packets on the buffer if available:
     while(COMMUNICATION_SERIAL.available()) {
-        // DEBUG_serial.write("trying to read...\n");
-
         timer_receive = 0;
         uint8_t serial_cf_byte_in;
         serial_cf_byte_in = COMMUNICATION_SERIAL.read();
-        // DEBUG_serial.printf("Received byte: %02X\n", serial_cf_byte_in);
         if ((serial_cf_byte_in == START_BYTE_SERIAL_CF) || (serial_cf_buf_in_cnt > 0)) {
         serial_cf_msg_buf_in[serial_cf_buf_in_cnt] = serial_cf_byte_in;
             serial_cf_buf_in_cnt++;
-            // DEBUG_serial.printf("Buffer count: %d\n", serial_cf_buf_in_cnt);
         }
         if (serial_cf_buf_in_cnt > sizeof(struct serial_control_in)  ) {
             serial_cf_buf_in_cnt = 0;

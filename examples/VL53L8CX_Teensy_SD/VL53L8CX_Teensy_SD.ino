@@ -6,7 +6,6 @@
 #include "serial_helpers.h"
 #include "sd_helpers.h"
 #include "i2c_helpers.h"
-#include "display_helpers.h"
 #include "sensor_helpers.h"
 #include "cf_helpers.hpp"
 
@@ -91,7 +90,7 @@ void loop()
           SerialPort.printf("Received %i packets over last second\n", serial_cf_received_packets);
           SerialPort.printf("Receiving took %i ms\n", timer_receive_outer / 1000);
           SerialPort.printf("Sending took %i ms\n", timer_send_outer / 1000);
-          SerialPort.printf("Last control output x:%d, y:%d, z:%d\n", myserial_control_out.torque_x, myserial_control_out.torque_y, myserial_control_out.torque_z);
+          SerialPort.printf("Last control output ll:%d, ml:%d, mr:%d, rr:%d\n", myserial_control_out.dist_ll, myserial_control_out.dist_ml, myserial_control_out.dist_mr, myserial_control_out.dist_rr);
           // DEBUG_serial.printf("CPU temp is %f\n", tempmonGetTemp());
           serial_cf_received_packets = 0;
           timer_count_main = 0;

@@ -46,7 +46,7 @@ void writeResultsToSD(File &dataFile, const char *dataFileName, const VL53L8CX_R
         // If current resolution is 4x4 (16 zones), fill remaining columns for 8x8 header with empty values
         if (res == VL53L8CX_RESOLUTION_4X4) {
             for (int i = VL53L8CX_RESOLUTION_4X4; i < VL53L8CX_RESOLUTION_8X8; i++) {
-                dataFile.print(",,,"); // Two commas for empty distance and status for unused zone columns
+                dataFile.print(",,"); // Two commas for empty distance and status for unused zone columns
             }
         }
 
