@@ -14,6 +14,8 @@
 #define LPN_PIN -1
 #define PWREN_PIN -1
 
+#define WRITE_TO_SD
+
 // Components.
 VL53L8CX sensor_vl53l8cx_top(&Wire, LPN_PIN);
 
@@ -35,6 +37,24 @@ void setup()
     serialPrintln("Starting Crazyflie communication");
     COMMUNICATION_SERIAL.begin(COMMUNICATION_SERIAL_BAUD);
 
+#ifdef WRITE_TO_SD
+    // Initialize SD card
+    serialPrintln("Initializing SD card...");
+    if (!SD.begin(BUILTIN_SDCARD))
+    {
+        serialPrintln("Card failed, or not present.");
+        while (1)
+            ;
+    }
+    serialPrintln("Card initialized.");
+    
+    // Find next available data file name
+    setNextDataFileName();
+    serialPrint("Logging to file: ");
+    serialPrintln(String(dataFileName));
+    dataFile = SD.open(dataFileName, FILE_WRITE);
+    writeSDHeader(dataFile);
+#endif
     serialPrintln("Initializing I2C bus");
     // Initialize I2C bus.
     Wire.begin();
@@ -49,6 +69,11 @@ void setup()
 void loop()
 {
     VL53L8CX_ResultsData Results = get_sensor_data();
+
+#ifdef WRITE_TO_SD
+    // Log results to SD card
+    writeResultsToSD(dataFile, Results, res);
+#endif
 
     // Store output message to be sent back to CF
     setOutputMessage(Results, res);

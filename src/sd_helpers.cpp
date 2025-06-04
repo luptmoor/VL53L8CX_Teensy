@@ -16,53 +16,40 @@ void setNextDataFileName() {
     snprintf(dataFileName, sizeof(dataFileName), "tof_data_%02d.csv", nextIdx);
 }
 
-void writeResultsToSD(File &dataFile, const char *dataFileName, const VL53L8CX_ResultsData &Results, uint8_t res) {
-    dataFile = SD.open(dataFileName, FILE_WRITE); // Opens in append mode
-    if (dataFile)
-    {
-        unsigned long timestamp = millis();
-        dataFile.print(timestamp);
+void writeResultsToSD(File &dataFile, const VL53L8CX_ResultsData &Results, uint8_t res) {
+    char lineBuffer[2048]; // Large enough for a full 8x8 line
+    int pos = 0;
+    unsigned long timestamp = millis();
+    pos += snprintf(lineBuffer + pos, sizeof(lineBuffer) - pos, "%lu", timestamp);
 
-        // Iterate through zones based on current resolution
-        // 'res' holds the number of active zones (16 for 4x4, 64 for 8x8)
-        for (int i = 0; i < res; i++) 
-        {
-            dataFile.print(","); // Separator for the next data pair
-            // Check if at least one target is detected in this zone
-            if (Results.nb_target_detected[i] > 0) 
-            {
-                // Distance of the first target in this zone
-                dataFile.print(Results.distance_mm[(VL53L8CX_NB_TARGET_PER_ZONE * i) + 0]);
-                dataFile.print(",");
-                // Status of the first target in this zone
-                dataFile.print(Results.target_status[(VL53L8CX_NB_TARGET_PER_ZONE * i) + 0]);
-            }
-            else
-            {
-                // No target detected in this zone, print empty placeholders
-                dataFile.print(","); // One comma for empty distance and status
-            }
+    // Iterate through zones based on current resolution
+    for (int i = 0; i < res; i++) {
+        pos += snprintf(lineBuffer + pos, sizeof(lineBuffer) - pos, ",");
+        if (Results.nb_target_detected[i] > 0) {
+            pos += snprintf(lineBuffer + pos, sizeof(lineBuffer) - pos, "%u,%u",
+                Results.distance_mm[(VL53L8CX_NB_TARGET_PER_ZONE * i) + 0],
+                Results.target_status[(VL53L8CX_NB_TARGET_PER_ZONE * i) + 0]);
+        } else {
+            pos += snprintf(lineBuffer + pos, sizeof(lineBuffer) - pos, ",");
         }
-        // If current resolution is 4x4 (16 zones), fill remaining columns for 8x8 header with empty values
-        if (res == VL53L8CX_RESOLUTION_4X4) {
-            for (int i = VL53L8CX_RESOLUTION_4X4; i < VL53L8CX_RESOLUTION_8X8; i++) {
-                dataFile.print(",,"); // Two commas for empty distance and status for unused zone columns
-            }
-        }
-
-        dataFile.println(); // End of line for this measurement
-        dataFile.close();
     }
-    else // Add diagnostic for loop open failure
-    {
+    // If current resolution is 4x4 (16 zones), fill remaining columns for 8x8 header with empty values
+    if (res == VL53L8CX_RESOLUTION_4X4) {
+        for (int i = VL53L8CX_RESOLUTION_4X4; i < VL53L8CX_RESOLUTION_8X8; i++) {
+            pos += snprintf(lineBuffer + pos, sizeof(lineBuffer) - pos, ",,");
+        }
+    }
+
+    if (dataFile) {
+        dataFile.println(lineBuffer);
+    } else {
         serialPrint("Loop Timestamp: "); 
         serialPrint(String(millis()));
-        serialPrintln(" - Error opening data file in loop to write data!");
+        serialPrintln(" - Data file not open for writing!");
     }
 }
 
-void writeSDHeader(File &dataFile, const char *dataFileName) {
-    dataFile = SD.open(dataFileName, FILE_WRITE);
+void writeSDHeader(File &dataFile) {
     if (dataFile) {
         serialPrintln("Writing CSV header to SD card...");
         dataFile.print("Time");
@@ -74,10 +61,8 @@ void writeSDHeader(File &dataFile, const char *dataFileName) {
             dataFile.print("_Status");
         }
         dataFile.println();
-        dataFile.close();
-        serialPrintln("Header written and file closed.");
+        serialPrintln("Header written.");
     } else {
-        serialPrintln("Error opening data file to write header!");
-        // Consider adding error handling, e.g., halt
+        serialPrintln("Error: data file not open to write header!");
     }
 }

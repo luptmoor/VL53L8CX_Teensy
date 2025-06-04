@@ -34,6 +34,9 @@ void setup()
     // Initialize serial for output.
     SerialPort.begin(9600);
 
+    serialPrintln("Starting Crazyflie communication");
+    COMMUNICATION_SERIAL.begin(COMMUNICATION_SERIAL_BAUD);
+
 #ifdef WRITE_TO_SD
     // Initialize SD card
     serialPrintln("Initializing SD card...");
@@ -72,4 +75,10 @@ void loop()
     // Log results to SD card
     writeResultsToSD(dataFile, Results, res);
 #endif
+
+    // Store output message to be sent back to CF
+    setOutputMessage(Results, res);
+
+    // Send message via UART to CF
+    sendCrazyflie();
 }

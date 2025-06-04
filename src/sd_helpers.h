@@ -6,7 +6,7 @@
 
 extern char dataFileName[20];
 void setNextDataFileName();
-void writeResultsToSD(File &dataFile, const char *dataFileName, const VL53L8CX_ResultsData &Results, uint8_t res);
-void writeSDHeader(File &dataFile, const char *dataFileName);
+void writeResultsToSD(File &dataFile, const VL53L8CX_ResultsData &Results, uint8_t res);
+void writeSDHeader(File &dataFile);
 
 #endif // SD_HELPERS_H
