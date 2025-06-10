@@ -64,14 +64,19 @@ void setInputMessage(void)
 
 void resetOutputMessage(void)
 {
-    myserial_control_out.dist_ll = 0;
-    myserial_control_out.dist_ml = 0;
-    myserial_control_out.dist_mr = 0;
-    myserial_control_out.dist_rr = 0;
+    myserial_control_out.dist_ll_forward = 0;
+    myserial_control_out.dist_ml_forward = 0;
+    myserial_control_out.dist_mr_forward = 0;
+    myserial_control_out.dist_rr_forward = 0;
+    
+    myserial_control_out.dist_ll_bottom = 0;
+    myserial_control_out.dist_ml_bottom = 0;
+    myserial_control_out.dist_mr_bottom = 0;
+    myserial_control_out.dist_rr_bottom = 0;
     myserial_control_out.checksum_out = 0;
 }
 
-void setOutputMessage(const VL53L8CX_ResultsData &Results, uint8_t res)
+void setOutputMessage(const VL53L8CX_ResultsData &results_bottom, const VL53L8CX_ResultsData &results_forward, uint8_t res)
 {
     // Reset the output message
     resetOutputMessage();
@@ -80,16 +85,30 @@ void setOutputMessage(const VL53L8CX_ResultsData &Results, uint8_t res)
     // this is done by summing the distances of the 4 zones and dividing by the number of targets detected
     // only the zones that have at least one target detected are considered
     for (uint16_t i = 0; i < 4 ; i++){
-        myserial_control_out.dist_ll += (Results.nb_target_detected[i*4 + 3] > 0) ? Results.distance_mm[i*4 + 3] : 0;
-        myserial_control_out.dist_ml += (Results.nb_target_detected[i*4 + 2] > 0) ? Results.distance_mm[i*4 + 2] : 0;
-        myserial_control_out.dist_mr += (Results.nb_target_detected[i*4 + 1] > 0) ? Results.distance_mm[i*4 + 1] : 0;
-        myserial_control_out.dist_rr += (Results.nb_target_detected[i*4 + 0] > 0) ? Results.distance_mm[i*4 + 0] : 0;
+        myserial_control_out.dist_ll_forward += (results_forward.nb_target_detected[i*4 + 3] > 0) ? results_forward.distance_mm[i*4 + 3] : 0;
+        myserial_control_out.dist_ml_forward += (results_forward.nb_target_detected[i*4 + 2] > 0) ? results_forward.distance_mm[i*4 + 2] : 0;
+        myserial_control_out.dist_mr_forward += (results_forward.nb_target_detected[i*4 + 1] > 0) ? results_forward.distance_mm[i*4 + 1] : 0;
+        myserial_control_out.dist_rr_forward += (results_forward.nb_target_detected[i*4 + 0] > 0) ? results_forward.distance_mm[i*4 + 0] : 0;
     }
     // divide by the number of targets detected in the 4 zones
-    myserial_control_out.dist_ll /= (Results.nb_target_detected[3] + Results.nb_target_detected[7] + Results.nb_target_detected[11] + Results.nb_target_detected[15]);
-    myserial_control_out.dist_ml /= (Results.nb_target_detected[2] + Results.nb_target_detected[6] + Results.nb_target_detected[10] + Results.nb_target_detected[14]);
-    myserial_control_out.dist_mr /= (Results.nb_target_detected[1] + Results.nb_target_detected[5] + Results.nb_target_detected[9] + Results.nb_target_detected[13]);
-    myserial_control_out.dist_rr /= (Results.nb_target_detected[0] + Results.nb_target_detected[4] + Results.nb_target_detected[8] + Results.nb_target_detected[12]);
+    myserial_control_out.dist_ll_forward /= (results_forward.nb_target_detected[3] + results_forward.nb_target_detected[7] + results_forward.nb_target_detected[11] + results_forward.nb_target_detected[15]);
+    myserial_control_out.dist_ml_forward /= (results_forward.nb_target_detected[2] + results_forward.nb_target_detected[6] + results_forward.nb_target_detected[10] + results_forward.nb_target_detected[14]);
+    myserial_control_out.dist_mr_forward /= (results_forward.nb_target_detected[1] + results_forward.nb_target_detected[5] + results_forward.nb_target_detected[9] + results_forward.nb_target_detected[13]);
+    myserial_control_out.dist_rr_forward /= (results_forward.nb_target_detected[0] + results_forward.nb_target_detected[4] + results_forward.nb_target_detected[8] + results_forward.nb_target_detected[12]);
+
+    // same for bottom sensor TODO: this still assumes the left-to-right assumptions, which is not correct for bottom sensor of course. Left is now back and right is front.  
+    for (uint16_t i = 0; i < 4 ; i++){
+        myserial_control_out.dist_ll_bottom += (results_bottom.nb_target_detected[i*4 + 3] > 0) ? results_bottom.distance_mm[i*4 + 3] : 0;
+        myserial_control_out.dist_ml_bottom += (results_bottom.nb_target_detected[i*4 + 2] > 0) ? results_bottom.distance_mm[i*4 + 2] : 0;
+        myserial_control_out.dist_mr_bottom += (results_bottom.nb_target_detected[i*4 + 1] > 0) ? results_bottom.distance_mm[i*4 + 1] : 0;
+        myserial_control_out.dist_rr_bottom += (results_bottom.nb_target_detected[i*4 + 0] > 0) ? results_bottom.distance_mm[i*4 + 0] : 0;
+    }
+    // divide by the number of targets detected in the 4 zones
+    myserial_control_out.dist_ll_bottom /= (results_bottom.nb_target_detected[3] + results_bottom.nb_target_detected[7] + results_bottom.nb_target_detected[11] + results_bottom.nb_target_detected[15]);
+    myserial_control_out.dist_ml_bottom /= (results_bottom.nb_target_detected[2] + results_bottom.nb_target_detected[6] + results_bottom.nb_target_detected[10] + results_bottom.nb_target_detected[14]);
+    myserial_control_out.dist_mr_bottom /= (results_bottom.nb_target_detected[1] + results_bottom.nb_target_detected[5] + results_bottom.nb_target_detected[9] + results_bottom.nb_target_detected[13]);
+    myserial_control_out.dist_rr_bottom /= (results_bottom.nb_target_detected[0] + results_bottom.nb_target_detected[4] + results_bottom.nb_target_detected[8] + results_bottom.nb_target_detected[12]);
+
 }
 
 

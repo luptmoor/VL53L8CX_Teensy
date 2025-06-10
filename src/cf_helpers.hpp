@@ -39,7 +39,7 @@ extern byte START_BYTE_SERIAL_CF;
 // Function declarations
 void serialParseMessageIn(void);
 void setInputMessage(void);
-void setOutputMessage(const VL53L8CX_ResultsData &Results, uint8_t res);
+void setOutputMessage(const VL53L8CX_ResultsData &results_bottom, const VL53L8CX_ResultsData &results_forward, uint8_t res);
 void sendCrazyflie(void);
 void receiveCrazyflie(void);
 

@@ -6,11 +6,12 @@
 #include "serial_helpers.h"
 #include "i2c_helpers.h"
 #include "sensor_helpers.h"
+#include "cf_helpers.hpp"
 
 #define SerialPort Serial
 
-#define LPN_PIN_FORWARD -1
-#define LPN_PIN_BOTTOM 22
+#define LPN_PIN_FORWARD 22
+#define LPN_PIN_BOTTOM -1
 #define PWREN_PIN -1
 
 // Components.
@@ -29,12 +30,15 @@ char dataFileName[20] = "tof_data_01.csv";
 /* Setup ---------------------------------------------------------------------*/
 void setup()
 {
-    // Set LPN pin to open drain IMPORTANT TO PROTECT SENSOR FROM DAMAGE!!
-    pinMode(LPN_PIN_BOTTOM, OUTPUT_OPENDRAIN);
-    digitalWrite(LPN_PIN_BOTTOM, HIGH);
+    // Set LPN pin to open drain, otherwise it doesn't work?
+    pinMode(LPN_PIN_FORWARD, OUTPUT_OPENDRAIN);
+    sensor_vl53l8cx_forward.on();
 
     // Initialize serial for output.
     SerialPort.begin(9600);
+
+    serialPrintln("Starting Crazyflie communication");
+    COMMUNICATION_SERIAL.begin(COMMUNICATION_SERIAL_BAUD);
 
     serialPrintln("Initializing I2C bus");
     // Initialize I2C bus.
@@ -50,30 +54,36 @@ void setup()
 
 
     // Set bottom sensor LPN pin low so we can set the i2c address of forward sensor
-    sensor_vl53l8cx_bottom.off();
-    sensor_vl53l8cx_forward.set_i2c_address(0x54); // Set I2C address for forward sensor
+    sensor_vl53l8cx_forward.off();
+    sensor_vl53l8cx_bottom.set_i2c_address(0x54); // Set I2C address for forward sensor
     serialPrintln("Set address");
     delay(50);
-    sensor_vl53l8cx_bottom.on();
+    sensor_vl53l8cx_forward.on();
     scan_i2c();
     delay(50);
-    sensor_init_and_report(sensor_vl53l8cx_forward, res);
     sensor_init_and_report(sensor_vl53l8cx_bottom, res);
+    sensor_init_and_report(sensor_vl53l8cx_forward, res);
     serialPrintln("Finished setting up sensors");
 
 }
 
 void loop()
 {
-    VL53L8CX_ResultsData Results = get_sensor_data(sensor_vl53l8cx_bottom);
+    VL53L8CX_ResultsData results_bottom = get_sensor_data(sensor_vl53l8cx_bottom);
 
     serialPrint("Bottom Sensor Data:  ");
-    serialPrint("Dist 1: " + String(Results.distance_mm[0]) + " mm, ");
-    serialPrint("Status 1: " + String(Results.target_status[0]) + " || ");
+    serialPrint("Dist 1: " + String(results_bottom.distance_mm[0]) + " mm, ");
+    serialPrint("Status 1: " + String(results_bottom.target_status[0]) + " || ");
     
-    Results = get_sensor_data(sensor_vl53l8cx_forward);
+    VL53L8CX_ResultsData results_forward = get_sensor_data(sensor_vl53l8cx_forward);
 
     serialPrint("Forward Sensor Data:  ");
-    serialPrint("Dist 1: " + String(Results.distance_mm[0]) + " mm, ");
-    serialPrintln("Status 1: " + String(Results.target_status[0]));
+    serialPrint("Dist 1: " + String(results_forward.distance_mm[0]) + " mm, ");
+    serialPrintln("Status 1: " + String(results_forward.target_status[0]));
+
+    // Store output message to be sent back to CF
+    setOutputMessage(results_bottom, results_forward, res);
+
+    // Send message via UART to CF
+    sendCrazyflie();
 }

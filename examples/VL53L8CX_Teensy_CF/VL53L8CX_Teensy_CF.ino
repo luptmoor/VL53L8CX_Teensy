@@ -17,7 +17,7 @@
 #define WRITE_TO_SD
 
 // Components.
-VL53L8CX sensor_vl53l8cx_top(&Wire, LPN_PIN);
+VL53L8CX sensor_vl53l8cx_forward(&Wire, LPN_PIN);
 
 bool EnableAmbient = false;
 bool EnableSignal = false;
@@ -55,6 +55,7 @@ void setup()
     dataFile = SD.open(dataFileName, FILE_WRITE);
     writeSDHeader(dataFile);
 #endif
+
     serialPrintln("Initializing I2C bus");
     // Initialize I2C bus.
     Wire.begin();
@@ -63,12 +64,12 @@ void setup()
     scan_i2c();
     // Sensor init and status reporting
     serialPrintln("Initializing sensor");
-    sensor_init_and_report();
+    sensor_init_and_report(sensor_vl53l8cx_forward, res);
 }
 
 void loop()
 {
-    VL53L8CX_ResultsData Results = get_sensor_data();
+    VL53L8CX_ResultsData Results = get_sensor_data(sensor_vl53l8cx_forward);
 
 #ifdef WRITE_TO_SD
     // Log results to SD card
