@@ -100,6 +100,7 @@ void process_sensor_data(uint16_t columnAverages[4], const VL53L8CX_ResultsData 
     // which is 0 for bottom right and N for top left, so averaged columns for the 
     // forward sensor are now ordered from right to left for the forward sensor
     
+    // Construct useful distance array
     uint8_t res_size = (res == VL53L8CX_RESOLUTION_4X4) ? 4 : 8; // 4x4 or 8x8 resolution
     uint16_t filteredDistances[res_size][res_size];
 
@@ -111,8 +112,39 @@ void process_sensor_data(uint16_t columnAverages[4], const VL53L8CX_ResultsData 
         filteredDistances[row][col] = max(filteredDistances[row][col], 0); // Ensure no negative distances
         filteredDistances[row][col] = (results.target_status[idx] == 255) ? 4000 : filteredDistances[row][col]; // Set 4000 for no target found
     }
-    // Average 4 groups of columns: [0,1], [2,3], [4,5], [6,7]
-    uint8_t counts[4] = {0};
+
+
+    // Construct backup array from surrounding pixels
+    uint16_t averagedDistances[res_size][res_size] = {}; // Only up to res_size x res_size used
+
+    for (int row = 0; row < res_size; ++row) {
+        for (int col = 0; col < res_size; ++col) {
+            // Compute average of up to 8 neighbors (not including self)
+            uint32_t sum = 0;
+            uint8_t count = 0;
+            for (int dr = -1; dr <= 1; ++dr) {
+                for (int dc = -1; dc <= 1; ++dc) {
+                    if (dr == 0 && dc == 0) continue; // skip self
+                    int nr = row + dr;
+                    int nc = col + dc;
+                    if (nr >= 0 && nr < res_size && nc >= 0 && nc < res_size) {
+                        if (filteredDistances[nr][nc] > 0) {
+                            sum += filteredDistances[nr][nc];
+                            ++count;
+                        }
+                    }
+                }
+            }
+            if (count > 0)
+                averagedDistances[row][col] = sum / count;
+            else
+                averagedDistances[row][col] = 0;
+        }
+    }
+
+
+
+    // --- Outlier Detection and Replacement ---
 
     // Determine number of rows and columns based on resolution
     int rowStart = (res_size == 8) ? 1 : 0; // For 8x8, skip first and last row; for 4x4, use all rows
@@ -122,6 +154,38 @@ void process_sensor_data(uint16_t columnAverages[4], const VL53L8CX_ResultsData 
         for (int group = 0; group < 4; ++group) {
             int col0 = group * (res_size / 4);
             int col1 = col0 + 1;
+
+            // Gather valid (non-zero) values for this group in this row
+            uint16_t vals[2];
+            int valCount = 0;
+            if (filteredDistances[row][col0] > 0) vals[valCount++] = filteredDistances[row][col0];
+            if (filteredDistances[row][col1] > 0) vals[valCount++] = filteredDistances[row][col1];
+
+            // Compute mean and stddev if at least 2 values
+            if (valCount > 1) {
+                float mean = (vals[0] + vals[1]) / 2.0f;
+                float var = ((vals[0] - mean) * (vals[0] - mean) + (vals[1] - mean) * (vals[1] - mean)) / 2.0f;
+                float stddev = sqrt(var);
+
+                // Check and replace outliers
+                if (fabs(filteredDistances[row][col0] - mean) > 2.0f * stddev) {
+                    filteredDistances[row][col0] = averagedDistances[row][col0];
+                }
+                if (fabs(filteredDistances[row][col1] - mean) > 2.0f * stddev) {
+                    filteredDistances[row][col1] = averagedDistances[row][col1];
+                }
+            }
+        }
+    }
+
+    // --- Column Averaging ---
+    uint8_t counts[4] = {0};
+
+    for (int row = rowStart; row <= rowEnd; ++row) {
+        for (int group = 0; group < 4; ++group) {
+            int col0 = group * (res_size / 4);
+            int col1 = col0 + 1;
+
             // Only average non-zero values
             if (filteredDistances[row][col0] > 0) {
                 columnAverages[group] += filteredDistances[row][col0];
@@ -140,4 +204,12 @@ void process_sensor_data(uint16_t columnAverages[4], const VL53L8CX_ResultsData 
             columnAverages[group] = 0;
         }
     }
+
+
+
+
+
+
+
+
 }
