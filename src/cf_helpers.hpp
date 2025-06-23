@@ -6,8 +6,6 @@
 #include <string.h>
 #include "cf_msgs.h"
 
-#include <vl53l8cx.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -39,7 +37,8 @@ extern byte START_BYTE_SERIAL_CF;
 // Function declarations
 void serialParseMessageIn(void);
 void setInputMessage(void);
-void setOutputMessage(const VL53L8CX_ResultsData &results_bottom, const VL53L8CX_ResultsData &results_forward, uint8_t res);
+// void setOutputMessage(const VL53L8CX_ResultsData &results_bottom, const VL53L8CX_ResultsData &results_forward, uint8_t res);
+void setOutputMessage(uint16_t resultsBottom[4], uint16_t resultsForward[4], uint8_t res);
 void sendCrazyflie(void);
 void receiveCrazyflie(void);
 

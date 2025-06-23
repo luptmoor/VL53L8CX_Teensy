@@ -41,7 +41,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "Arduino.h"
-#include "Wire.h"
+#include <Wire.h>
 #include "SPI.h"
 #include "platform.h"
 #include "vl53l8cx_api.h"
@@ -155,7 +155,7 @@ class VL53L8CX {
         return i != size;
       }
       if (dev_spi) {
-        uint8_t status = 0;
+        // uint8_t status = 0;
         uint32_t position = 0;
         uint32_t data_size = 0;
         uint16_t    temp;
@@ -225,7 +225,7 @@ class VL53L8CX {
       if (dev_spi) {
 
         uint8_t status = 0;
-        int32_t i = 0;
+        // int32_t i = 0;
         uint32_t position = 0;
         uint32_t data_size = 0;
         uint16_t    temp;
@@ -243,7 +243,7 @@ class VL53L8CX {
           temp = reg + position;
           data_write[0] = SPI_WRITE_MASK(temp) >> 8;
           data_write[1] = SPI_WRITE_MASK(temp) & 0xFF;
-          for (i = 0; i < data_size; i++) {
+          for (uint32_t i = 0; i < data_size; i++) {
             data_write[i + 2] = p_values[position + i];
           }
           data_size += 2;

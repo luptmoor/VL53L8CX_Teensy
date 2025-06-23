@@ -1,5 +1,6 @@
 {
     "files.associations": {
-        "cf_msgs.h": "c"
+        "cf_msgs.h": "c",
+        "fstream": "cpp"
     }
 }

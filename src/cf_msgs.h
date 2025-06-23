@@ -1,10 +1,16 @@
+#ifndef CF_MSGS_H
+#define CF_MSGS_H
+
 struct __attribute__((__packed__)) serial_control_in {
     //thrust (used for resetting network)
     float thrust;
-    //state
-    float roll; //roll target
-    float pitch; //pitch target
-    float yaw; //yaw rate target
+    // state
+    float roll;
+    float pitch;
+    // control targets
+    float roll_t; //roll target
+    float pitch_t; //pitch target
+    float yaw_t; //yaw rate target
     // gyro values
     float roll_gyro;
     float pitch_gyro;
@@ -31,3 +37,5 @@ struct __attribute__((__packed__)) serial_control_out {
     //CHECKSUM
     uint8_t checksum_out;
 };
+
+#endif // CF_MSGS_H

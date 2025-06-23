@@ -1,6 +1,4 @@
-#include <Arduino.h>
 #include "serial_helpers.h"
-#include <vl53l8cx.h>
 
 #define SerialPort Serial
 
